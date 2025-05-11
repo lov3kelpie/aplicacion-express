@@ -58,13 +58,41 @@ app.post('/insert', jsonParser, function (req, res) {
     });
 
     stmt.finalize();
-    
+
     //Enviamos de regreso la respuesta
     res.setHeader('Content-Type', 'application/json');
     res.status(201).send();
 })
 
-
+    // **ENDPOINT "agrega_todo"
+    app.post('/agrega_todo', jsonParser, function (req, res) {
+        // Imprimimos el contenido del campo todo recibido
+        const { todo } = req.body;
+        console.log('Todo recibido en /agrega_todo:', todo);
+    
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*'); // Para permitir todas las solicitudes (no recomendado en producción)
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS'); // Métodos permitidos
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); // Cabeceras permitidas
+    
+        if (!todo) {
+            res.status(400).send('Falta el campo "todo" en la petición');
+            return;
+        }
+    
+        const stmt = db.prepare('INSERT INTO todos (todo, created_at) VALUES (?, CURRENT_TIMESTAMP)');
+        stmt.run(todo, (err) => {
+            if (err) {
+                console.error("Error al insertar en la base de datos:", err);
+                res.status(500).send('Error al guardar el todo');
+                return;
+            } else {
+                console.log("Todo agregado correctamente:", todo);
+                res.status(201).json({ message: 'Todo agregado correctamente' });
+            }
+        });
+        stmt.finalize();
+    });
 
 app.get('/', function (req, res) {
     //Enviamos de regreso la respuesta
@@ -72,6 +100,18 @@ app.get('/', function (req, res) {
     res.end(JSON.stringify({ 'status': 'ok2' }));
 })
 
+// Nuevo endpoint para obtener la lista de todos
+app.get('/todos', function (req, res) {
+    db.all('SELECT id, todo, created_at FROM todos', [], (err, rows) => {
+        if (err) {
+            console.error(err.message);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.json(rows);
+    });
+});
 
 //Creamos un endpoint de login que recibe los datos como json
 app.post('/login', jsonParser, function (req, res) {
